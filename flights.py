@@ -62,7 +62,7 @@ def buscar_voos(from_, to_, departure_date, return_date, price_min, price_max):
     conn = http.client.HTTPSConnection("booking-com.p.rapidapi.com")
 
     headers = {
-        'x-rapidapi-key': "293ce6e8femshc37232362435587p11a4e9jsn099831f6d5c6",
+        'x-rapidapi-key': "api_key",
         'x-rapidapi-host': "booking-com.p.rapidapi.com"
     }
 
@@ -116,6 +116,7 @@ def buscar_voos(from_, to_, departure_date, return_date, price_min, price_max):
 # --- Main loop ---
 
 token = os.getenv("TELEGRAM_TOKEN")
+api_key = os.getenv("API_KEY")
 
 if not token:
     raise ValueError("Variável TELEGRAM_TOKEN não configurada.")
