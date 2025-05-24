@@ -6,8 +6,20 @@ import time
 import os
 from flask import Flask
 from threading import Thread
+import threading
 
 app = Flask(__name__)
+
+
+def monitorar_voos_usuario(chat_id, from_, to_, departure_date, return_date, price_min, price_max, horas, token):
+    fim = datetime.now() + timedelta(hours=horas)
+    intervalo_segundos = 3600
+    while datetime.now() < fim:
+        resposta = buscar_voos(from_, to_, departure_date, return_date, price_min, price_max)
+        if "Oferta encontrada" in resposta:
+            send_message_to_telegram(chat_id, resposta, token)
+        time.sleep(intervalo_segundos)
+    send_message_to_telegram(chat_id, f"Monitoramento encerrado após {horas} horas.", token)
 
 @app.route('/')
 def home():
@@ -76,7 +88,7 @@ def buscar_voos(from_, to_, departure_date, return_date, price_min, price_max):
     conn = http.client.HTTPSConnection("booking-com.p.rapidapi.com")
 
     headers = {
-        'x-rapidapi-key': "api_key",
+        'x-rapidapi-key': api_key,
         'x-rapidapi-host': "booking-com.p.rapidapi.com"
     }
 
@@ -170,20 +182,10 @@ while True:
 
                 send_message_to_telegram(chat_id, f"Buscando voos por {horas} horas. Vou avisar se encontrar algo dentro do preço.", token)
 
-                fim = datetime.now() + timedelta(hours=horas)
-                intervalo_segundos = 3600
-
-                while datetime.now() < fim:
-                    resposta = buscar_voos(from_, to_, departure_date, return_date, price_min, price_max)
-                    print(resposta)
-                    if "Nenhum voo dentro da faixa" not in resposta and "Nenhuma oferta" not in resposta and "Erro" not in resposta:
-                        send_message_to_telegram(chat_id, f"Oferta encontrada:\n{resposta}", token)
-                    else:
-                        print(f"{datetime.now()}: Nenhuma oferta válida encontrada.")
-
-                    time.sleep(intervalo_segundos)
-
-                send_message_to_telegram(chat_id, f"Monitoramento encerrado após {horas} horas.", token)
+                threading.Thread(
+                target=monitorar_voos_usuario,
+                args=(chat_id, from_, to_, departure_date, return_date, price_min, price_max, horas, token)
+            ).start()
 
             else:
                 mensagem_erro = (
