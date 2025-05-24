@@ -4,7 +4,21 @@ import urllib.parse
 from datetime import datetime, timedelta
 import time
 import os
+from flask import Flask
+from threading import Thread
 
+app = Flask(__name__)
+
+@app.route('/')
+def home():
+    return "Eu estou vivo!"
+
+def run():
+    app.run(host='0.0.0.0', port=10000)  # Pode ser outra porta
+
+def keep_alive():
+    t = Thread(target=run)
+    t.start()
 
 def parse_custom_date(date_str):
     if len(date_str) == 6:
@@ -125,7 +139,7 @@ offset = None
 primeira_vez = True  # 👈 Flag para primeira mensagem depois de rodar o script
 
 print("Bot iniciado e aguardando mensagens...")
-
+keep_alive()
 while True:
     chat_id, first_name, texto, update_id = get_updates(token, offset)
 
