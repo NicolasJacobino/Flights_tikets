@@ -3,6 +3,7 @@ import json
 import urllib.parse
 from datetime import datetime, timedelta
 import time
+import os
 
 
 def parse_custom_date(date_str):
@@ -114,7 +115,10 @@ def buscar_voos(from_, to_, departure_date, return_date, price_min, price_max):
 
 # --- Main loop ---
 
-token = "8120170618:AAE8Ec4WuaHFNkVv-JPZkpzRz7EFaY7DIiY"
+token = os.getenv("TELEGRAM_TOKEN")
+
+if not token:
+    raise ValueError("Variável TELEGRAM_TOKEN não configurada.")
 offset = None
 
 primeira_vez = True  # 👈 Flag para primeira mensagem depois de rodar o script
