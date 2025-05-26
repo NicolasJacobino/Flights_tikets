@@ -84,3 +84,7 @@ def buscar_voos(parametros_str):
 def rota_voos():
     mensagem = request.args.get("mensagem", "")
     return buscar_voos(mensagem)
+
+
+if __name__ == "__main__":
+    app.run()
