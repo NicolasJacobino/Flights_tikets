@@ -1,8 +1,9 @@
-from flask import Flask, request
 import os
 import json
 import http.client
 from datetime import datetime
+from flask import Flask, request
+from flight_search import buscar_voos  # exemplo: importe corretamente sua função
 
 app = Flask(__name__)
 
@@ -80,11 +81,13 @@ def buscar_voos(parametros_str):
     except Exception as e:
         return f"Erro ao buscar voo: {e}"
 
+app = Flask(__name__)
+
+@app.route("/")
+def health_check():
+    return "Aplicação em funcionamento!", 200
+
 @app.route("/voos", methods=["GET"])
 def rota_voos():
     mensagem = request.args.get("mensagem", "")
     return buscar_voos(mensagem)
-
-
-if __name__ == "__main__":
-    app.run()
