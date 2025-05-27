@@ -5,6 +5,7 @@ import time
 import os
 from datetime import datetime
 from flask import Flask, request
+from threading import Thread
 
 app = Flask(__name__)
 
@@ -212,8 +213,14 @@ def health_check():
 def alive():
     return "pong", 200
 
+@app.route('/')
+def home():
+    return "Bot está rodando!"
+
+def run_flask():
+    port = int(os.environ.get('PORT', 10000))
+    app.run(host='0.0.0.0', port=port, debug=False, use_reloader=False)
 
 if __name__ == "__main__":
-    print("Bot iniciado...")
-    loop_telegram()
-    print("⚠️ Resposta da API sem 'result':", response)
+    Thread(target=run_flask).start()
+    loop_telegram()  # sua função principal que roda o bot
