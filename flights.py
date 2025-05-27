@@ -119,13 +119,13 @@ def requisita_api(parametros_sem_horas):
             conexao1_ = legs_[1].get('departureAirport',{}).get('code','???')
             tempo_total_h_ = (segments_.get('totalTime',0)//3600)
             tempo_total_min_ = (segments_.get('totalTime',0)%3600)//60
-            conexoes_ = f"✈️O voo de ida possui  1 conexão em {conexao1_} \nTempo total da viagem estimado é {tempo_total_h_}H e {tempo_total_min_.:2f}min"
+            conexoes_ = f"✈️O voo de ida possui  1 conexão em {conexao1_} \nTempo total da viagem estimado é {tempo_total_h_}H e {tempo_total_min_}min"
         elif len(legs_) == 3:
             conexao1_ = legs_[1].get('departureAirport',{}).get('code','???')
             conexao2_ = legs_[1].get('arrivalAirport',{}).get('code','???')
             tempo_total_h_ = (segments_.get('totalTime',0)//3600)
             tempo_total_min_ = (segments_.get('totalTime',0)%3600)//60
-            conexoes_ = f"✈️O voo de ida possui  2 conexões em {conexao1_} e {conexao2_}\nTempo total da viagem estimado é {tempo_total_h_}H e {tempo_total_min_.:2f}min"
+            conexoes_ = f"✈️O voo de ida possui  2 conexões em {conexao1_} e {conexao2_}\nTempo total da viagem estimado é {tempo_total_h_}H e {tempo_total_min_}min"
         
         #volta
          segments1_ = raw_segments_[1]
@@ -136,13 +136,13 @@ def requisita_api(parametros_sem_horas):
             conexao1_v_ = legs_[1].get('departureAirport',{}).get('code','???')
             tempo_total_h_v_ = (segments_.get('totalTime',0)//3600)
             tempo_total_min_v_ = (segments_.get('totalTime',0)%3600)//60
-            conexoes_ = f"✈️O voo de volta possui  1 conexão em {conexao1_v_} \nTempo total da viagem estimado é {tempo_total_h_v_}H e {tempo_total_min_v_.:2f}min"
+            conexoes_ = f"✈️O voo de volta possui  1 conexão em {conexao1_v_} \nTempo total da viagem estimado é {tempo_total_h_v_}H e {tempo_total_min_v_}min"
         elif len(legs_) == 3:
             conexao1_v_ = legs_[1].get('departureAirport',{}).get('code','???')
             conexao2_v_ = legs_[1].get('arrivalAirport',{}).get('code','???')
             tempo_total_h_v_ = (segments_.get('totalTime',0)//3600)
             tempo_total_min_v_ = (segments_.get('totalTime',0)%3600)//60
-            conexoes_v_ = f"✈️O voo de volta possui  2 conexões em {conexao1_v_} e {conexao2_v_}\nTempo total da viagem estimado é {tempo_total_h_v_}H e {tempo_total_min_v_.:2f}min"
+            conexoes_v_ = f"✈️O voo de volta possui  2 conexões em {conexao1_v_} e {conexao2_v_}\nTempo total da viagem estimado é {tempo_total_h_v_}H e {tempo_total_min_v_}min"
 
         #Calculo de bagagens
 
