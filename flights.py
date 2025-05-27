@@ -204,6 +204,15 @@ def loop_telegram():
 
         time.sleep(5)
 
+@app.route("/")
+def health_check():
+    return "Aplicação em funcionamento!", 200
+
+@app.route("/ping")
+def alive():
+    return "pong", 200
+
+
 if __name__ == "__main__":
     print("Bot iniciado...")
     loop_telegram()
