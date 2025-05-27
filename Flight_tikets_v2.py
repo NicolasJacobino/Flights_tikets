@@ -47,7 +47,7 @@ def buscar_voos(parametros_str):
             f"&to_code={destino}.AIRPORT"
             f"&depart_date={data_ida}"
             f"&return_date={data_volta}"
-            f"&page_number=1"
+            f"&page_number=0"
             f"&currency=BRL"
             f"&children_ages=0"
             f"&adults=1"
