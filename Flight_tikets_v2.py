@@ -3,7 +3,6 @@ import json
 import http.client
 from datetime import datetime
 from flask import Flask, request
-from flight_search import buscar_voos  # exemplo: importe corretamente sua função
 
 app = Flask(__name__)
 
@@ -34,8 +33,12 @@ def buscar_voos(parametros_str):
 
         conn = http.client.HTTPSConnection("booking-com.p.rapidapi.com")
 
+        api_key = os.environ.get("API_KEY")
+        if not api_key:
+            return "Erro: API_KEY não configurada no ambiente."
+
         headers = {
-            'x-rapidapi-key': os.environ["API_KEY"],
+            'x-rapidapi-key': api_key,
             'x-rapidapi-host': "booking-com.p.rapidapi.com"
         }
 
@@ -80,8 +83,6 @@ def buscar_voos(parametros_str):
 
     except Exception as e:
         return f"Erro ao buscar voo: {e}"
-
-app = Flask(__name__)
 
 @app.route("/")
 def health_check():
