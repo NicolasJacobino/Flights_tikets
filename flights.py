@@ -1,38 +1,42 @@
 import http.client
 import json
 import urllib.parse
-from datetime import datetime, timedelta
 import time
 import os
-from flask import Flask
-from threading import Thread
-import threading
+from datetime import datetime
 
-app = Flask(__name__)
+# Variáveis globais com token e api_key do ambiente
+token = os.getenv("TELEGRAM_TOKEN")
+api_key = os.getenv("API_KEY")
 
+if not token or not api_key:
+    raise ValueError("Configure as variáveis TELEGRAM_TOKEN e API_KEY no ambiente")
 
-def monitorar_voos_usuario(chat_id, from_, to_, departure_date, return_date, price_min, price_max, horas, token):
-    fim = datetime.now() + timedelta(hours=horas)
-    intervalo_segundos = 3600
-    while datetime.now() < fim:
-        resposta = buscar_voos(from_, to_, departure_date, return_date, price_min, price_max)
-        if "Oferta encontrada" in resposta:
-            send_message_to_telegram(chat_id, resposta, token)
-        time.sleep(intervalo_segundos)
-    send_message_to_telegram(chat_id, f"Monitoramento encerrado após {horas} horas.", token)
+def envia_telegram(texto, chat_id):
+    conn = http.client.HTTPSConnection("api.telegram.org")
+    texto_url = urllib.parse.quote_plus(texto)
+    endpoint = f"/bot{token}/sendMessage?chat_id={chat_id}&text={texto_url}&parse_mode=Markdown"
+    conn.request("GET", endpoint)
+    res = conn.getresponse()
+    res.read()
+    conn.close()
 
-@app.route('/')
-def home():
-    return "Eu estou vivo!"
-
-def run():
-   app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 10000)))
-
-def keep_alive():
-    t = Thread(target=run)
-    t.start()
+def pega_mensagens(offset=0):
+    conn = http.client.HTTPSConnection("api.telegram.org")
+    params = f"?offset={offset}" if offset else ""
+    endpoint = f"/bot{token}/getUpdates{params}"
+    conn.request("GET", endpoint)
+    res = conn.getresponse()
+    data = res.read().decode("utf-8")
+    conn.close()
+    try:
+        return json.loads(data)
+    except Exception as e:
+        print("Erro ao carregar updates:", e)
+        return {"result": []}
 
 def parse_custom_date(date_str):
+    # Transforma ddmmaa ou ddmmaaaa em yyyy-mm-dd
     if len(date_str) == 6:
         day = date_str[:2]
         month = date_str[2:4]
@@ -41,84 +45,45 @@ def parse_custom_date(date_str):
     elif len(date_str) == 8:
         full_date = date_str
     else:
-        raise ValueError("Formato inválido. Use ddmmaa ou ddmmaaaa.")
+        raise ValueError("Formato de data inválido. Use ddmmaa ou ddmmaaaa.")
     return datetime.strptime(full_date, "%d%m%Y").strftime("%Y-%m-%d")
 
-
-def get_updates(token, offset=None):
-    conn = http.client.HTTPSConnection("api.telegram.org")
-    params = f"?offset={offset}" if offset else ""
-    endpoint = f"/bot{token}/getUpdates{params}"
-
-    conn.request("GET", endpoint)
-    res = conn.getresponse()
-    data = res.read().decode("utf-8")
-    conn.close()
-
+def requisita_api(parametros_sem_horas):
+    # parâmetros_sem_horas = 'ORIGEM;DESTINO;DATAPARTIDA;DATARETORNO;PRECOMIN;PRECOMAX'
     try:
-        updates = json.loads(data)
-        if "result" in updates and updates["result"]:
-            last_update = updates["result"][-1]
-            chat_id = last_update.get("message", {}).get("chat", {}).get("id")
-            first_name = last_update.get("message", {}).get("from", {}).get("first_name")
-            text_chat = last_update.get("message", {}).get("text")
-            update_id = last_update.get("update_id")
-            return chat_id, first_name, text_chat, update_id
-        else:
-            return None, None, None, None
-    except Exception as e:
-        print(f"Erro ao processar a resposta: {e}")
-        return None, None, None, None
+        from_, to_, departure_date_raw, return_date_raw, price_min, price_max = parametros_sem_horas.split(';')
+        departure_date = parse_custom_date(departure_date_raw)
+        return_date = parse_custom_date(return_date_raw)
+        price_min = float(price_min)
+        price_max = float(price_max)
 
+        conn = http.client.HTTPSConnection("booking-com.p.rapidapi.com")
+        headers = {
+            'x-rapidapi-key': api_key,
+            'x-rapidapi-host': "booking-com.p.rapidapi.com"
+        }
+        url = (
+            f"/v1/flights/search?from_code={from_}.AIRPORT"
+            f"&to_code={to_}.AIRPORT"
+            f"&depart_date={departure_date}"
+            f"&return_date={return_date}"
+            f"&page_number=1"
+            f"&currency=BRL"
+            f"&children_ages=0"
+            f"&adults=1"
+            f"&cabin_class=ECONOMY"
+            f"&locale=pt-br"
+            f"&flight_type=ROUNDTRIP"
+            f"&order_by=CHEAPEST"
+        )
+        conn.request("GET", url, headers=headers)
+        res = conn.getresponse()
+        data = res.read().decode("utf-8")
+        conn.close()
 
-def send_message_to_telegram(chat_id, text, token):
-    conn = http.client.HTTPSConnection("api.telegram.org")
-    text_encoded = urllib.parse.quote_plus(text)
-    endpoint = f"/bot{token}/sendMessage?chat_id={chat_id}&text={text_encoded}&parse_mode=Markdown"
-
-    conn.request("GET", endpoint)
-    res = conn.getresponse()
-    res.read()  # Ler para liberar conexão
-    conn.close()
-    print("Mensagem enviada ao Telegram.")
-
-
-
-def buscar_voos(from_, to_, departure_date, return_date, price_min, price_max):
-    conn = http.client.HTTPSConnection("booking-com.p.rapidapi.com")
-
-    headers = {
-        'x-rapidapi-key': api_key,
-        'x-rapidapi-host': "booking-com.p.rapidapi.com"
-    }
-
-    url = (
-        f"/v1/flights/search?from_code={from_}.AIRPORT"
-        f"&to_code={to_}.AIRPORT"
-        f"&depart_date={departure_date}"
-        f"&return_date={return_date}"
-        f"&page_number=1"
-        f"&currency=BRL"
-        f"&children_ages=0"
-        f"&adults=1"
-        f"&cabin_class=ECONOMY"
-        f"&locale=pt-br"
-        f"&flight_type=ROUNDTRIP"
-        f"&order_by=CHEAPEST"
-    )
-
-    conn.request("GET", url, headers=headers)
-    res = conn.getresponse()
-    data = res.read()
-    conn.close()
-
-    api_raw = data.decode("utf-8")
-
-    try:
-        api_dict = json.loads(api_raw)
-        print(api_dict)
+        api_dict = json.loads(data)
         flight_offers = api_dict.get('flightOffers', [])
-        print(flight_offers)
+
         if not flight_offers:
             return "Nenhuma oferta de voo encontrada."
 
@@ -131,75 +96,105 @@ def buscar_voos(from_, to_, departure_date, return_date, price_min, price_max):
         price_base = price_base_info.get('units', 0) + price_base_info.get('nanos', 0) / 1e9
 
         if price_min < price_base < price_max:
-            return f"Preço total sem taxas: {price_base:.2f}\nPreço total com taxas: {price_total:.2f}"
+            return f"💰 Oferta encontrada!\nPreço base (sem taxas): R$ {price_base:.2f}\nPreço total (com taxas): R$ {price_total:.2f}"
         else:
             return "Nenhum voo dentro da faixa de preço informada."
 
     except Exception as e:
-        return f"Erro ao processar resposta da API: {e}"
+        return f"Erro ao consultar API: {e}"
 
+def loop_telegram():
+    atual = 0
+    chats_respondidos = set()
 
-# --- Main loop ---
+    while True:
+        updates = pega_mensagens(atual)
+        for resultado in updates["result"]:
+            atual = resultado["update_id"] + 1
+            mensagem = resultado.get("message")
+            if not mensagem:
+                continue
 
-token = os.getenv("TELEGRAM_TOKEN")
-api_key = os.getenv("API_KEY")
+            text = mensagem.get("text", "")
+            cid = mensagem["chat"]["id"]
+            first_name = mensagem["chat"].get("first_name", "usuário")
 
-if not token:
-    raise ValueError("Variável TELEGRAM_TOKEN não configurada.")
-offset = None
-
-primeira_vez = True  # 👈 Flag para primeira mensagem depois de rodar o script
-
-print("Bot iniciado e aguardando mensagens...")
-keep_alive()
-while True:
-    chat_id, first_name, texto, update_id = get_updates(token, offset)
-
-    if chat_id and texto:
-        if primeira_vez:
-            mensagem_boas_vindas = (
-                f"Olá {first_name} ✈️\n"
-                "Para onde você quer voar?\n\n"
-                "Descreva sua busca no seguinte formato:\n"
-                "`ORIGEM;DESTINO;DATAPARTIDA;DATARETORNO;PRECOMIN;PRECOMAX;TEMPO_HORAS`\n\n"
-                "*Exemplo:* `CNF;GRU;120525;250525;300;800;5`"
-            )
-            send_message_to_telegram(chat_id, mensagem_boas_vindas, token)
-            primeira_vez = False  # 👈 A partir daqui, desativa
-            offset = update_id + 1
-            continue
-
-        try:
-            parts = texto.strip().split(';')
-            if len(parts) == 7:
-                from_ = parts[0].strip().upper()
-                to_ = parts[1].strip().upper()
-                departure_date = parse_custom_date(parts[2].strip())
-                return_date = parse_custom_date(parts[3].strip())
-                price_min = int(parts[4].strip())
-                price_max = int(parts[5].strip())
-                horas = float(parts[6].strip())
-
-                send_message_to_telegram(chat_id, f"Buscando voos por {horas} horas. Vou avisar se encontrar algo dentro do preço.", token)
-
-                threading.Thread(
-                target=monitorar_voos_usuario,
-                args=(chat_id, from_, to_, departure_date, return_date, price_min, price_max, horas, token)
-            ).start()
-
-            else:
-                mensagem_erro = (
-                    "Formato incorreto. Envie:\n"
-                    "`ORIGEM;DESTINO;DATAPARTIDA;DATARETORNO;PRECOMIN;PRECOMAX;TEMPO_HORAS`\n"
-                    "*Exemplo:* `CNF;GRU;120525;250525;300;800;5`"
+            # Primeira interação: envia instruções e formulário
+            if cid not in chats_respondidos:
+                mensagem1 = f"Olá {first_name} ✈️\nPor favor, preencha o formulário abaixo:"
+                mensagem2 = (
+                    "Local de partida: \n"
+                    "Local de chegada: \n"
+                    "Data de Partida: \n"
+                    "Data de retorno: \n"
+                    "Valor mínimo da passagem: \n"
+                    "Valor máximo da passagem: \n"
+                    "Horas de execução do serviço:"
                 )
-                send_message_to_telegram(chat_id, mensagem_erro, token)
+                envia_telegram(mensagem1, cid)
+                envia_telegram(mensagem2, cid)
+                chats_respondidos.add(cid)
+                continue
 
-        except Exception as e:
-            send_message_to_telegram(chat_id, f"Erro ao processar sua mensagem: {e}", token)
+            # Verifica se o texto tem todos os campos do formulário
+            if all(campo in text for campo in [
+                "Local de partida:", "Local de chegada:", "Data de Partida:",
+                "Data de retorno:", "Valor mínimo da passagem:",
+                "Valor máximo da passagem:", "Horas de execução do serviço:"
+            ]):
+                try:
+                    linhas = text.split('\n')
+                    valores = [linha.split(':', 1)[1].strip().upper() for linha in linhas if ':' in linha]
+                    if len(valores) == 7:
+                        parametros_str = ';'.join(valores[:6])
+                        horas = int(valores[6])
 
-        offset = update_id + 1
+                        envia_telegram(f"Buscando voos por {horas} hora(s)...\nPara cancelar digite 'para'", cid)
 
-    else:
-        time.sleep(2)
+                        interrompe = False
+                        for h in range(horas):
+                            envia_telegram(f"🔎 Verificação {h+1}/{horas} em andamento...", cid)
+                            resposta = requisita_api(parametros_str)
+                            envia_telegram(resposta, cid)
+                            print(resposta)
 
+                            if h < horas - 1:
+                                tempo_total = 3600  # 1 hora
+                                intervalo = 5      # intervalo de checagem para mensagens em segundos
+                                ciclos = tempo_total // intervalo
+
+                                for _ in range(ciclos):
+                                    novas_msgs = pega_mensagens(atual)
+                                    for novo_resultado in novas_msgs["result"]:
+                                        atual = novo_resultado["update_id"] + 1
+                                        nova_msg = novo_resultado.get("message")
+                                        if not nova_msg:
+                                            continue
+
+                                        novo_texto = nova_msg.get("text", "").strip().lower()
+                                        novo_cid = nova_msg["chat"]["id"]
+
+                                        if novo_cid == cid and novo_texto in ["para", "parar", "stop"]:
+                                            envia_telegram("⛔ Interrupção solicitada. Você pode iniciar novamente preenchendo o formulário.", cid)
+                                            chats_respondidos.discard(cid)
+                                            interrompe = True
+                                            break
+                                    if interrompe:
+                                        break
+                                    time.sleep(intervalo)
+                            if interrompe:
+                                break
+
+                    else:
+                        envia_telegram("⚠️ Formulário incompleto. Preencha todos os campos!", cid)
+                except Exception as e:
+                    print("Erro ao processar formulário:", e)
+                    envia_telegram("⚠️ Erro ao processar a resposta. Verifique o formato e tente novamente.", cid)
+            else:
+                envia_telegram("❗Por favor, preencha o formulário exatamente como enviado, respondendo após os `:`.", cid)
+
+        time.sleep(5)
+
+if __name__ == "__main__":
+    print("Bot iniciado...")
+    loop_telegram()
