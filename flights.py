@@ -5,7 +5,7 @@ import time
 import os
 from datetime import datetime
 
-
+app = Flask(__name__)
 
 # Variáveis globais com token e api_key do ambiente
 token = os.getenv("TELEGRAM_TOKEN")
