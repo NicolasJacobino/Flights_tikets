@@ -5,6 +5,8 @@ import time
 import os
 from datetime import datetime
 
+
+
 # Variáveis globais com token e api_key do ambiente
 token = os.getenv("TELEGRAM_TOKEN")
 api_key = os.getenv("API_KEY")
@@ -196,7 +198,5 @@ def loop_telegram():
         time.sleep(5)
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 10000))  # usa a porta do Render ou 5000 local
-    flights.run(host="0.0.0.0", port=port)
     print("Bot iniciado...")
     loop_telegram()
