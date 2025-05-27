@@ -197,6 +197,6 @@ def loop_telegram():
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))  # usa a porta do Render ou 5000 local
-    app.run(host="0.0.0.0", port=port)
+    flights.run(host="0.0.0.0", port=port)
     print("Bot iniciado...")
     loop_telegram()
