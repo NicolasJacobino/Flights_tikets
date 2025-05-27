@@ -31,10 +31,16 @@ def pega_mensagens(offset=0):
     res = conn.getresponse()
     data = res.read().decode("utf-8")
     conn.close()
+
     try:
-        return json.loads(data)
+        response = json.loads(data)
+        if "result" not in response:
+            print("⚠️ Resposta da API sem 'result':", response)
+            return {"result": []}
+        return response
     except Exception as e:
         print("Erro ao carregar updates:", e)
+        print("Resposta crua da API:", data)
         return {"result": []}
 
 def parse_custom_date(date_str):
@@ -200,3 +206,4 @@ def loop_telegram():
 if __name__ == "__main__":
     print("Bot iniciado...")
     loop_telegram()
+    print("⚠️ Resposta da API sem 'result':", response)
