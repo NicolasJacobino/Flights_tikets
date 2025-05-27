@@ -98,15 +98,59 @@ def requisita_api(parametros_sem_horas):
             return "Nenhuma oferta de voo encontrada."
 
         offer = flight_offers[0]
+        
+        #Calculo de preços
         price_info = offer.get('priceBreakdown', {})
         price_total_info = price_info.get('total', {})
         price_base_info = price_info.get('baseFare', {})
+        raw_carrier_ = price_info.get('carrierTaxBreakdown',[])
+        carrier_ = raw_carrier_[0].get('carrier',{})
+        ag_ = carrier_.get('name','???')
+        
+        #Calculo de conexoes
+        raw_segments_ = offer.get('segments',[])
+        
+        #ida
+        segments_ = raw_segments_[0]
+        legs_ = segments_.get('legs',[])
+        if len(legs_) == 1 :
+            conexoes_ = "O voo não possui conexões"
+        elif len(legs_) == 2 :
+            conexao1_ = legs_[1].get('departureAirport',{}).get('code','???')
+            tempo_total_h_ = (segments_.get('totalTime',0)//3600)
+            tempo_total_min_ = (segments_.get('totalTime',0)%3600)//60
+            conexoes_ = f"✈️O voo de ida possui  1 conexão em {conexao1_} \nTempo total da viagem estimado é {tempo_total_h_}H e {tempo_total_min_.:2f}min"
+        elif len(legs_) == 3:
+            conexao1_ = legs_[1].get('departureAirport',{}).get('code','???')
+            conexao2_ = legs_[1].get('arrivalAirport',{}).get('code','???')
+            tempo_total_h_ = (segments_.get('totalTime',0)//3600)
+            tempo_total_min_ = (segments_.get('totalTime',0)%3600)//60
+            conexoes_ = f"✈️O voo de ida possui  2 conexões em {conexao1_} e {conexao2_}\nTempo total da viagem estimado é {tempo_total_h_}H e {tempo_total_min_.:2f}min"
+        
+        #volta
+         segments1_ = raw_segments_[1]
+        legs_ = segments1_.get('legs',[])
+        if len(legs_) == 1 :
+            conexoes_v_ = "O voo não possui conexões"
+        elif len(legs_) == 2 :
+            conexao1_v_ = legs_[1].get('departureAirport',{}).get('code','???')
+            tempo_total_h_v_ = (segments_.get('totalTime',0)//3600)
+            tempo_total_min_v_ = (segments_.get('totalTime',0)%3600)//60
+            conexoes_ = f"✈️O voo de volta possui  1 conexão em {conexao1_v_} \nTempo total da viagem estimado é {tempo_total_h_v_}H e {tempo_total_min_v_.:2f}min"
+        elif len(legs_) == 3:
+            conexao1_v_ = legs_[1].get('departureAirport',{}).get('code','???')
+            conexao2_v_ = legs_[1].get('arrivalAirport',{}).get('code','???')
+            tempo_total_h_v_ = (segments_.get('totalTime',0)//3600)
+            tempo_total_min_v_ = (segments_.get('totalTime',0)%3600)//60
+            conexoes_v_ = f"✈️O voo de volta possui  2 conexões em {conexao1_v_} e {conexao2_v_}\nTempo total da viagem estimado é {tempo_total_h_v_}H e {tempo_total_min_v_.:2f}min"
+
+        #Calculo de bagagens
 
         price_total = price_total_info.get('units', 0) + price_total_info.get('nanos', 0) / 1e9
         price_base = price_base_info.get('units', 0) + price_base_info.get('nanos', 0) / 1e9
 
         if price_min < price_base < price_max:
-            return f"💰 Oferta encontrada!\nPreço base (sem taxas): R$ {price_base:.2f}\nPreço total (com taxas): R$ {price_total:.2f}"
+            return f"💰 Oferta encontrada para o voo de {from_} a {to_}!\nPreço base (sem taxas): R$ {price_base:.2f}\nPreço total (com taxas): R$ {price_total:.2f}\n{conexoes_}\n{conexoes_v_}\nA Agência resposavel é {ag_}"
         else:
             return "Nenhum voo dentro da faixa de preço informada."
 
@@ -169,7 +213,7 @@ def loop_telegram():
                             print(resposta)
 
                             if h < horas - 1:
-                                tempo_total = 3600  # 1 hora
+                                tempo_total = 3180 # Seria 3600/1 hora, porem cada intervalo tem a duração de 84 segundos para ocorrer
                                 intervalo = 5      # intervalo de checagem para mensagens em segundos
                                 ciclos = tempo_total // intervalo
 
