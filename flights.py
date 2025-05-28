@@ -6,6 +6,7 @@ import os
 from datetime import datetime
 from flask import Flask, request
 from threading import Thread
+from google.colab import userdata
 
 app = Flask(__name__)
 
@@ -71,7 +72,8 @@ def parse_custom_date(date_str):
     for fmt in formats:
         try:
             date = datetime.strptime(date_str, fmt)
-            return date.strftime("%d%m%y")  # <-- Aqui usamos %y para ano com 2 dígitos
+            #return date.strftime("%d-%m-%y")  # <-- Aqui usamos %y para ano com 2 dígitos
+            return date.strftime("%Y-%m-%d")
         except ValueError:
             continue
 
@@ -80,41 +82,45 @@ def parse_custom_date(date_str):
 def requisita_api(parametros_sem_horas):
     # parâmetros_sem_horas = 'ORIGEM;DESTINO;DATAPARTIDA;DATARETORNO;PRECOMIN;PRECOMAX'
     try:
+        print(parametros_sem_horas)
         from_, to_, departure_date_raw, return_date_raw, price_min, price_max = parametros_sem_horas.split(';')
         departure_date = parse_custom_date(departure_date_raw)
         return_date = parse_custom_date(return_date_raw)
         price_min = float(price_min)
         price_max = float(price_max)
-
+        print(departure_date)
+        print(return_date)
         conn = http.client.HTTPSConnection("booking-com.p.rapidapi.com")
         headers = {
             'x-rapidapi-key': api_key,
             'x-rapidapi-host': "booking-com.p.rapidapi.com"
         }
         url = (
-            f"/v1/flights/search?from_code={from_}.AIRPORT"
-            f"&to_code={to_}.AIRPORT"
-            f"&depart_date={departure_date}"
-            f"&return_date={return_date}"
-            f"&page_number=1"
-            f"&currency=BRL"
-            f"&children_ages=0"
-            f"&adults=1"
-            f"&cabin_class=ECONOMY"
-            f"&locale=pt-br"
-            f"&flight_type=ROUNDTRIP"
-            f"&order_by=CHEAPEST"
-        )
+              f"/v1/flights/search?"
+              f"from_code={from_}.AIRPORT&"
+              f"depart_date={departure_date}&"
+              f"page_number=0&"
+              f"currency=BRL&"
+              f"children_ages=0&"
+              f"to_code={to_}.AIRPORT&"
+              f"adults=1&"
+              f"return_date={return_date}&"
+              f"cabin_class=ECONOMY&"
+              f"locale=pt-br&"
+              f"flight_type=ROUNDTRIP&"
+              f"order_by=CHEAPEST"
+              )
         conn.request("GET", url, headers=headers)
         res = conn.getresponse()
         data = res.read().decode("utf-8")
+        print(data)
         conn.close()
 
         api_dict = json.loads(data)
         flight_offers = api_dict.get('flightOffers', [])
 
         if not flight_offers:
-            return "Nenhuma oferta de voo encontrada."
+            return "Erro: contate o servidor."
 
         offer = flight_offers[0]
         
@@ -135,7 +141,7 @@ def requisita_api(parametros_sem_horas):
         if len(legs_) == 1 :
             tempo_total_h_ = (segments_.get('totalTime',0)//3600)
             tempo_total_min_ = (segments_.get('totalTime',0)%3600)//60
-            conexoes_ = "O voo não possui conexões\n⏱️Tempo total da viagem estimado é {tempo_total_h_}H e {tempo_total_min_}min"
+            conexoes_ = f"O voo não possui conexões\n⏱️Tempo total da viagem estimado é {tempo_total_h_}H e {tempo_total_min_}min"
         elif len(legs_) == 2 :
             conexao1_ = legs_[1].get('departureAirport',{}).get('code','???')
             tempo_total_h_ = (segments_.get('totalTime',0)//3600)
@@ -149,24 +155,26 @@ def requisita_api(parametros_sem_horas):
             conexoes_ = f"✈️O voo de ida possui  2 conexões em {conexao1_} e {conexao2_}\n⏱️Tempo total da viagem estimado é {tempo_total_h_}H e {tempo_total_min_}min"
         
         #volta
-        segments1_ = raw_segments_[1]
-        legs_ = segments1_.get('legs',[])
-        if len(legs_) == 1 :
-            tempo_total_h_v_ = (segments1_.get('totalTime',0)//3600)
-            tempo_total_min_v_ = (segments1_.get('totalTime',0)%3600)//60
-            conexoes_v_ = "O voo não possui conexões\n⏱️Tempo total da viagem é {tempo_total_h_v_}H e {tempo_total_min_v_}min"
-        elif len(legs_) == 2 :
-            conexao1_v_ = legs_[1].get('departureAirport',{}).get('code','???')
-            tempo_total_h_v_ = (segments1_.get('totalTime',0)//3600)
-            tempo_total_min_v_ = (segments1_.get('totalTime',0)%3600)//60
-            conexoes_v_ = f"✈️Voo de volta: 1 conexão em {conexao1_v_} \n⏱️Tempo total da viagem é {tempo_total_h_v_}H e {tempo_total_min_v_}min"
-        elif len(legs_) == 3:
-            conexao1_v_ = legs_[1].get('departureAirport',{}).get('code','???')
-            conexao2_v_ = legs_[1].get('arrivalAirport',{}).get('code','???')
-            tempo_total_h_v_ = (segments1_.get('totalTime',0)//3600)
-            tempo_total_min_v_ = (segments1_.get('totalTime',0)%3600)//60
-            conexoes_v_ = f"✈️Voo de volta: 2 conexões em {conexao1_v_} e {conexao2_v_}\n⏱️Tempo total da viagem é {tempo_total_h_v_}H e {tempo_total_min_v_}min"
-
+        if  len(raw_segments_) > 1 :
+          segments1_ = raw_segments_[1]
+          legs_ = segments1_.get('legs',[])
+          if len(legs_) == 1 :
+              tempo_total_h_v_ = (segments1_.get('totalTime',0)//3600)
+              tempo_total_min_v_ = (segments1_.get('totalTime',0)%3600)//60
+              conexoes_v_ = f"O voo não possui conexões\n⏱️Tempo total da viagem é {tempo_total_h_v_}H e {tempo_total_min_v_}min"
+          elif len(legs_) == 2 :
+              conexao1_v_ = legs_[1].get('departureAirport',{}).get('code','???')
+              tempo_total_h_v_ = (segments1_.get('totalTime',0)//3600)
+              tempo_total_min_v_ = (segments1_.get('totalTime',0)%3600)//60
+              conexoes_v_ = f"✈️Voo de volta: 1 conexão em {conexao1_v_} \n⏱️Tempo total da viagem é {tempo_total_h_v_}H e {tempo_total_min_v_}min"
+          elif len(legs_) >= 3:
+              conexao1_v_ = legs_[1].get('departureAirport',{}).get('code','???')
+              conexao2_v_ = legs_[1].get('arrivalAirport',{}).get('code','???')
+              tempo_total_h_v_ = (segments1_.get('totalTime',0)//3600)
+              tempo_total_min_v_ = (segments1_.get('totalTime',0)%3600)//60
+              conexoes_v_ = f"✈️Voo de volta: 2 conexões em {conexao1_v_} e {conexao2_v_}\n⏱️Tempo total da viagem é {tempo_total_h_v_}H e {tempo_total_min_v_}min"
+        else:
+          conexoes_v_ = "Erro ao adquirir informações do voo de volta."
         #Calculo de bagagens
         
         price_total = price_total_info.get('units', 0) + price_total_info.get('nanos', 0) / 1e9
@@ -190,6 +198,7 @@ def atende_usuario(cid, texto_formulario, atual_inicial, chats_respondidos, usua
             return
         
         parametros_str = ';'.join(valores[:6])
+        print(parametros_str)
         horas = int(valores[6])
 
         envia_telegram(f"Buscando voos por {horas} hora(s)...\nPara cancelar digite 'para'", cid)
@@ -198,9 +207,10 @@ def atende_usuario(cid, texto_formulario, atual_inicial, chats_respondidos, usua
         atual = atual_inicial
 
         for h in range(horas):
-            envia_telegram(f"🔎 Verificação {h+1}/{horas} em andamento...", cid)
+            #envia_telegram(f"🔎 Verificação {h+1}/{horas} em andamento...", cid)
             resposta = requisita_api(parametros_str)
-            envia_telegram(resposta, cid)
+            if resposta != 'Nenhum voo dentro da faixa de preço informada.'
+              envia_telegram(resposta, cid)
             print(resposta)
 
             if h < horas - 1:
@@ -245,6 +255,7 @@ def loop_telegram():
         for resultado in updates.get("result", []):
             atual = resultado["update_id"] + 1
             mensagem = resultado.get("message")
+            print(mensagem.get("text", ""))
             if not mensagem:
                 continue
 
