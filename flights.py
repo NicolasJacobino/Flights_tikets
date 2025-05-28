@@ -201,7 +201,7 @@ def atende_usuario(cid, texto_formulario, atual_inicial, chats_respondidos, usua
         print(parametros_str)
         horas = int(valores[6])
 
-        envia_telegram(f"Buscando voos por {horas} hora(s)...\nPara cancelar digite 'para'", cid)
+        envia_telegram(f"Buscando voos por {horas} hora(s)...\nPara cancelar digite 'parar'", cid)
 
         interrompe = False
         atual = atual_inicial
