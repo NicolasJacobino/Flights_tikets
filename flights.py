@@ -5,15 +5,14 @@ import time
 import os
 from datetime import datetime
 from flask import Flask, request
-from threading import Thread, Lock
+from threading import Thread
 
 app = Flask(__name__)
 
 # Variáveis globais com token e api_key do ambiente
 token = os.getenv("TELEGRAM_TOKEN")
 api_key = os.getenv("API_KEY")
-usuarios_em_execucao = set()
-lock = Lock()
+
 if not token or not api_key:
     raise ValueError("Configure as variáveis TELEGRAM_TOKEN e API_KEY no ambiente")
 
@@ -136,7 +135,7 @@ def requisita_api(parametros_sem_horas):
         if len(legs_) == 1 :
             tempo_total_h_ = (segments_.get('totalTime',0)//3600)
             tempo_total_min_ = (segments_.get('totalTime',0)%3600)//60
-            conexoes_ = f"O voo não possui conexões\n⏱️Tempo total da viagem estimado é {tempo_total_h_}H e {tempo_total_min_}min"
+            conexoes_ = "O voo não possui conexões\n⏱️Tempo total da viagem estimado é {tempo_total_h_}H e {tempo_total_min_}min"
         elif len(legs_) == 2 :
             conexao1_ = legs_[1].get('departureAirport',{}).get('code','???')
             tempo_total_h_ = (segments_.get('totalTime',0)//3600)
@@ -155,7 +154,7 @@ def requisita_api(parametros_sem_horas):
         if len(legs_) == 1 :
             tempo_total_h_v_ = (segments1_.get('totalTime',0)//3600)
             tempo_total_min_v_ = (segments1_.get('totalTime',0)%3600)//60
-            conexoes_v_ = f"O voo não possui conexões\n⏱️Tempo total da viagem é {tempo_total_h_v_}H e {tempo_total_min_v_}min"
+            conexoes_v_ = "O voo não possui conexões\n⏱️Tempo total da viagem é {tempo_total_h_v_}H e {tempo_total_min_v_}min"
         elif len(legs_) == 2 :
             conexao1_v_ = legs_[1].get('departureAirport',{}).get('code','???')
             tempo_total_h_v_ = (segments1_.get('totalTime',0)//3600)
@@ -181,112 +180,105 @@ def requisita_api(parametros_sem_horas):
     except Exception as e:
         return f"Erro ao consultar API: {e}"
 
-def processa_usuario(cid, text, atual):
+def atende_usuario(cid, texto_formulario, atual_inicial, chats_respondidos, usuarios_em_execucao):
     try:
-        mensagem1 = (
-            "Preencha o formulário abaixo conforme o modelo:\n\n"
-            "Local de partida: [ex: Natal]\n"
-            "Local de chegada: [ex: São Paulo]\n"
-            "Data de Partida: [ex: 15/10/2024]\n"
-            "Data de retorno: [ex: 20/10/2024]\n"
-            "Valor mínimo da passagem: [ex: 300]\n"
-            "Valor máximo da passagem: [ex: 900]\n"
-            "Horas de execução do serviço: [ex: 2]"
-        )
-        mensagem2 = (
-            "Local de partida: \n"
-            "Local de chegada: \n"
-            "Data de Partida: \n"
-            "Data de retorno: \n"
-            "Valor mínimo da passagem: \n"
-            "Valor máximo da passagem: \n"
-            "Horas de execução do serviço:"
-        )
-
-        envia_telegram(mensagem1, cid)
-        envia_telegram(mensagem2, cid)
-
-        while True:
-            time.sleep(5)
-            novas_msgs = pega_mensagens(atual)
-            for resultado in novas_msgs["result"]:
-                atual = resultado["update_id"] + 1
-                nova_msg = resultado.get("message", {})
-                if nova_msg.get("chat", {}).get("id") != cid:
-                    continue
-                text = nova_msg.get("text", "").strip()
-
-                if all(campo in text for campo in [
-                    "Local de partida:", "Local de chegada:", "Data de Partida:",
-                    "Data de retorno:", "Valor mínimo da passagem:",
-                    "Valor máximo da passagem:", "Horas de execução do serviço:"
-                ]):
-                    try:
-                        linhas = text.split('\n')
-                        valores = [linha.split(':', 1)[1].strip().upper() for linha in linhas if ':' in linha]
-                        if len(valores) == 7:
-                            parametros_str = ';'.join(valores[:6])
-                            horas = int(valores[6])
-
-                            envia_telegram(f"Buscando voos por {horas} hora(s)...\nPara cancelar digite 'para'", cid)
-
-                            interrompe = False
-                            for h in range(horas):
-                                envia_telegram(f"🔎 Verificação {h+1}/{horas} em andamento...", cid)
-                                resposta = requisita_api(parametros_str)
-                                envia_telegram(resposta, cid)
-                                print(resposta)
-
-                                if h < horas - 1:
-                                    tempo_total = 3200
-                                    intervalo = 5
-                                    ciclos = tempo_total // intervalo
-
-                                    for _ in range(ciclos):
-                                        novas = pega_mensagens(atual)
-                                        for novo in novas["result"]:
-                                            atual = novo["update_id"] + 1
-                                            msg = novo.get("message", {})
-                                            if msg.get("chat", {}).get("id") == cid:
-                                                novo_texto = msg.get("text", "").strip().lower()
-                                                if novo_texto in ["para", "parar", "stop"]:
-                                                    envia_telegram("⛔ Interrupção solicitada.", cid)
-                                                    interrompe = True
-                                                    break
-                                        if interrompe:
-                                            break
-                                        time.sleep(intervalo)
-                                if interrompe:
-                                    break
-                        else:
-                            envia_telegram("⚠️ Formulário incompleto.", cid)
-                    except Exception as e:
-                        print("Erro ao processar:", e)
-                        envia_telegram("⚠️ Erro ao processar a resposta.", cid)
-                else:
-                    envia_telegram("❗Preencha o formulário corretamente.", cid)
-
-    finally:
-        with lock:
+        linhas = texto_formulario.split('\n')
+        valores = [linha.split(':', 1)[1].strip().upper() for linha in linhas if ':' in linha]
+        if len(valores) != 7:
+            envia_telegram("⚠️ Formulário incompleto. Preencha todos os campos!", cid)
             usuarios_em_execucao.discard(cid)
+            return
+        
+        parametros_str = ';'.join(valores[:6])
+        horas = int(valores[6])
+
+        envia_telegram(f"Buscando voos por {horas} hora(s)...\nPara cancelar digite 'para'", cid)
+
+        interrompe = False
+        atual = atual_inicial
+
+        for h in range(horas):
+            envia_telegram(f"🔎 Verificação {h+1}/{horas} em andamento...", cid)
+            resposta = requisita_api(parametros_str)
+            envia_telegram(resposta, cid)
+            print(resposta)
+
+            if h < horas - 1:
+                tempo_total = 3200  # duração do intervalo em segundos
+                intervalo = 5       # intervalo para checar mensagens
+                ciclos = tempo_total // intervalo
+
+                for _ in range(ciclos):
+                    novas_msgs = pega_mensagens(atual)
+                    for novo_resultado in novas_msgs["result"]:
+                        atual = novo_resultado["update_id"] + 1
+                        nova_msg = novo_resultado.get("message")
+                        if not nova_msg:
+                            continue
+
+                        novo_texto = nova_msg.get("text", "").strip().lower()
+                        novo_cid = nova_msg["chat"]["id"]
+
+                        if novo_cid == cid and novo_texto in ["para", "parar", "stop"]:
+                            envia_telegram("⛔ Interrupção solicitada. Você pode iniciar novamente preenchendo o formulário.", cid)
+                            chats_respondidos.discard(cid)
+                            interrompe = True
+                            break
+                    if interrompe:
+                        break
+                    time.sleep(intervalo)
+            if interrompe:
+                break
+    except Exception as e:
+        print("Erro ao processar formulário:", e)
+        envia_telegram("⚠️ Erro ao processar a resposta. Verifique o formato e tente novamente.", cid)
+    finally:
+        usuarios_em_execucao.discard(cid)
 
 def loop_telegram():
     atual = 0
+    chats_respondidos = set()
+    usuarios_em_execucao = set()
+
     while True:
-        mensagens = pega_mensagens(atual)
-        for resultado in mensagens["result"]:
+        updates = pega_mensagens(atual)
+        for resultado in updates.get("result", []):
             atual = resultado["update_id"] + 1
-            msg = resultado.get("message", {})
-            cid = msg.get("chat", {}).get("id")
-            text = msg.get("text", "").strip()
+            mensagem = resultado.get("message")
+            if not mensagem:
+                continue
 
-            with lock:
-                if cid in usuarios_em_execucao:
-                    continue
+            text = mensagem.get("text", "")
+            cid = mensagem["chat"]["id"]
+            first_name = mensagem["chat"].get("first_name", "usuário")
+
+            # PRIMEIRA INTERAÇÃO: envia formulário
+            if cid not in chats_respondidos and cid not in usuarios_em_execucao:
+                mensagem1 = f"Olá {first_name} ✈️\nPor favor, preencha o formulário abaixo:"
+                mensagem2 = (
+                    "Local de partida: \n"
+                    "Local de chegada: \n"
+                    "Data de Partida: \n"
+                    "Data de retorno: \n"
+                    "Valor mínimo da passagem: \n"
+                    "Valor máximo da passagem: \n"
+                    "Horas de execução do serviço:"
+                )
+                envia_telegram(mensagem1, cid)
+                envia_telegram(mensagem2, cid)
+                chats_respondidos.add(cid)
+                continue
+
+            # Se o usuário já enviou o formulário completo e não está executando processo, chama a função de atendimento
+            if (cid not in usuarios_em_execucao and
+                all(campo in text for campo in [
+                    "Local de partida:", "Local de chegada:", "Data de Partida:",
+                    "Data de retorno:", "Valor mínimo da passagem:",
+                    "Valor máximo da passagem:", "Horas de execução do serviço:"
+                ])):
+                
                 usuarios_em_execucao.add(cid)
-
-            # Lança uma nova thread para cada novo usuário
-            Thread(target=processa_usuario, args=(cid, text, atual)).start()
+                Thread(target=atende_usuario, args=(cid, text, atual, chats_respondidos, usuarios_em_execucao)).start()
 
         time.sleep(5)
 
@@ -298,9 +290,6 @@ def health_check():
 def alive():
     return "pong", 200
 
-@app.route('/')
-def home():
-    return "Bot está rodando!"
 
 def run_flask():
     port = int(os.environ.get('PORT', 10000))
