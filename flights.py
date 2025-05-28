@@ -209,7 +209,7 @@ def atende_usuario(cid, texto_formulario, atual_inicial, chats_respondidos, usua
         for h in range(horas):
             #envia_telegram(f"🔎 Verificação {h+1}/{horas} em andamento...", cid)
             resposta = requisita_api(parametros_str)
-            if resposta != 'Nenhum voo dentro da faixa de preço informada.'
+            if resposta != 'Nenhum voo dentro da faixa de preço informada.':
               envia_telegram(resposta, cid)
             print(resposta)
 
