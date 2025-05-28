@@ -136,7 +136,7 @@ def requisita_api(parametros_sem_horas):
             conexao1_v_ = legs_[1].get('departureAirport',{}).get('code','???')
             tempo_total_h_v_ = (segments_.get('totalTime',0)//3600)
             tempo_total_min_v_ = (segments_.get('totalTime',0)%3600)//60
-            conexoes_ = f"✈️O voo de volta possui  1 conexão em {conexao1_v_} \nTempo total da viagem estimado é {tempo_total_h_v_}H e {tempo_total_min_v_}min"
+            conexoes_v_ = f"✈️O voo de volta possui  1 conexão em {conexao1_v_} \nTempo total da viagem estimado é {tempo_total_h_v_}H e {tempo_total_min_v_}min"
         elif len(legs_) == 3:
             conexao1_v_ = legs_[1].get('departureAirport',{}).get('code','???')
             conexao2_v_ = legs_[1].get('arrivalAirport',{}).get('code','???')
