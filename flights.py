@@ -199,7 +199,7 @@ def atende_usuario(cid, texto_formulario, atual_inicial, chats_respondidos, usua
         
         parametros_str = ';'.join(valores[:6])
         print(parametros_str)
-        horas = int(valores[6])
+        horas = int(valores[6])/4
 
         envia_telegram(f"Buscando voos por {horas} hora(s)...\nPara cancelar digite 'parar'", cid)
 
@@ -214,7 +214,7 @@ def atende_usuario(cid, texto_formulario, atual_inicial, chats_respondidos, usua
             print(resposta)
 
             if h < horas - 1:
-                tempo_total = 3200  # duração do intervalo em segundos
+                tempo_total = 3200*4  # duração do intervalo em segundos
                 intervalo = 5       # intervalo para checar mensagens
                 ciclos = tempo_total // intervalo
 
