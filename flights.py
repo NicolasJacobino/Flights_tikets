@@ -128,7 +128,7 @@ def requisita_api(parametros_sem_horas):
             conexoes_ = f"✈️O voo de ida possui  2 conexões em {conexao1_} e {conexao2_}\nTempo total da viagem estimado é {tempo_total_h_}H e {tempo_total_min_}min"
         
         #volta
-         segments1_ = raw_segments_[1]
+        segments1_ = raw_segments_[1]
         legs_ = segments1_.get('legs',[])
         if len(legs_) == 1 :
             conexoes_v_ = "O voo não possui conexões"
