@@ -243,6 +243,8 @@ def atende_usuario(cid, texto_formulario, atual_inicial, chats_respondidos, usua
         print("Erro ao processar formulário:", e)
         envia_telegram("⚠️ Erro ao processar a resposta. Verifique o formato e tente novamente.", cid)
     finally:
+        if cid in chats_respondidos:
+          chats_respondidos.discard(cid)
         usuarios_em_execucao.discard(cid)
 
 def loop_telegram():
