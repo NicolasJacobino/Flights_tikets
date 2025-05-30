@@ -214,7 +214,7 @@ def atende_usuario(cid, texto_formulario, atual_inicial, chats_respondidos, usua
         print(parametros_str)
         raw_horas = (int(valores[6])*3600)//4
         horas =  raw_horas//3600
-        envia_telegram(f"Buscando voos por {horas} hora(s)...\nPara cancelar digite 'parar'", cid)
+        envia_telegram(f"Buscando voos por {int(valores[6]} hora(s)...\nPara cancelar digite 'parar'", cid)
 
         interrompe = False
         atual = atual_inicial
@@ -225,7 +225,7 @@ def atende_usuario(cid, texto_formulario, atual_inicial, chats_respondidos, usua
             if resposta != 'Nenhum voo dentro da faixa de preço informada.':
                 if resposta in ["Erro: Formato de data inválido.","Erro: A data de partida não pode ser anterior a hoje.","Erro: A data de retorno não pode ser anterior a hoje.","Erro: A data de retorno não pode ser anterior à data de partida."]:
                     envia_telegram(resposta, cid)
-                    envia_telegram("Preencha novamente o Formulário com as datas corretas",cid)
+                    #envia_telegram("Preencha novamente o Formulário com as datas corretas",cid)
                     interrompe = True
                     break
                 else:
