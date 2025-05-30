@@ -88,17 +88,6 @@ def requisita_api(parametros_sem_horas):
         from_, to_, departure_date_raw, return_date_raw, price_min, price_max = parametros_sem_horas.split(';')
         departure_date = parse_custom_date(departure_date_raw)
         return_date = parse_custom_date(return_date_raw)
-        
-        if not departure_date or not return_date:
-            return "Erro: Formato de data inválido."
-        today = datetime.today().date()
-        if departure_date.date() < today:
-            return "Erro: A data de partida não pode ser anterior a hoje."
-        if return_date.date() < today:
-            return "Erro: A data de retorno não pode ser anterior a hoje."
-        if return_date < departure_date:
-            return "Erro: A data de retorno não pode ser anterior à data de partida."
-            
         price_min = float(price_min)
         price_max = float(price_max)
         print(departure_date)
@@ -209,7 +198,17 @@ def atende_usuario(cid, texto_formulario, atual_inicial, chats_respondidos, usua
             envia_telegram("⚠️ Formulário incompleto. Preencha todos os campos!", cid)
             usuarios_em_execucao.discard(cid)
             return
-        
+        if len(valores[0])>3 or len(valores[1])>3:
+            return "Erro: Coloque apenas o código do aeroporto.Preencha corretamente o formulário"
+        today = datetime.today().date()
+        departure_date = parse_custom_date(valores[2])
+        return_date = parse_custom_date(valores[3])
+        if departure_date.date() < today:
+            return "Erro: A data de partida não pode ser anterior a hoje.Preencha corretamente o formulário"
+        if return_date.date() < today:
+            return "Erro: A data de retorno não pode ser anterior a hoje."
+        if return_date < departure_date:
+            return "Erro: A data de retorno não pode ser anterior à data de partida."
         parametros_str = ';'.join(valores[:6])
         print(parametros_str)
         horas_reais = int(valores[6])
@@ -224,13 +223,7 @@ def atende_usuario(cid, texto_formulario, atual_inicial, chats_respondidos, usua
             #envia_telegram(f"🔎 Verificação {h+1}/{horas} em andamento...", cid)
             resposta = requisita_api(parametros_str)
             if resposta != 'Nenhum voo dentro da faixa de preço informada.':
-                if resposta in ["Erro: Formato de data inválido.","Erro: A data de partida não pode ser anterior a hoje.","Erro: A data de retorno não pode ser anterior a hoje.","Erro: A data de retorno não pode ser anterior à data de partida."]:
-                    envia_telegram(resposta, cid)
-                    #envia_telegram("Preencha novamente o Formulário com as datas corretas",cid)
-                    interrompe = True
-                    break
-                else:
-                    envia_telegram(resposta, cid)
+                envia_telegram(resposta, cid)
             print(resposta)
 
             if h < horas - 1:
@@ -268,9 +261,9 @@ def atende_usuario(cid, texto_formulario, atual_inicial, chats_respondidos, usua
         usuarios_em_execucao.discard(cid)
         envia_telegram("Fim da pesquisa!\nPara reiniciar preencha novamente o formulário", cid)
         envia_telegram (
-                    "Local de partida: \n"
-                    "Local de chegada: \n"
-                    "Data de Partida: \n"
+                    "Local de partida(Código do Aeroporto, ex:CNF): \n"
+                    "Local de chegada(Código do Aeroporto, ex:CNF): \n"
+                    "Data de partida: \n"
                     "Data de retorno: \n"
                     "Valor mínimo da passagem: \n"
                     "Valor máximo da passagem: \n"
@@ -299,8 +292,8 @@ def loop_telegram():
             if cid not in chats_respondidos and cid not in usuarios_em_execucao:
                 mensagem1 = f"Olá {first_name} ✈️\nPor favor, preencha o formulário abaixo:"
                 mensagem2 = (
-                    "Local de partida: \n"
-                    "Local de chegada: \n"
+                    "Local de partida(Código do Aeroporto, ex:CNF): \n"
+                    "Local de chegada(Código do Aeroporto, ex:CNF): \n"
                     "Data de Partida: \n"
                     "Data de retorno: \n"
                     "Valor mínimo da passagem: \n"
