@@ -201,13 +201,13 @@ def atende_usuario(cid, texto_formulario, atual_inicial, chats_respondidos, usua
         if len(valores[0])>3 or len(valores[1])>3:
             return "Erro: Coloque apenas o código do aeroporto.Preencha corretamente o formulário"
         today = datetime.today().date()
-        departure_date = parse_custom_date(valores[2])
-        return_date = parse_custom_date(valores[3])
-        if departure_date.date() < today:
+        departure_date_obj = datetime.strptime(parse_custom_date(valores[2]), "%Y-%m-%d")
+        return_date_obj = datetime.strptime(parse_custom_date(valores[3]), "%Y-%m-%d")
+        if departure_date_obj.date() < today:
             return "Erro: A data de partida não pode ser anterior a hoje.Preencha corretamente o formulário"
-        if return_date.date() < today:
+        if return_date_obj.date() < today:
             return "Erro: A data de retorno não pode ser anterior a hoje."
-        if return_date < departure_date:
+        if return_date_obj < departure_date_obj:
             return "Erro: A data de retorno não pode ser anterior à data de partida."
         parametros_str = ';'.join(valores[:6])
         print(parametros_str)
