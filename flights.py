@@ -212,7 +212,7 @@ def atende_usuario(cid, texto_formulario, atual_inicial, chats_respondidos, usua
         
         parametros_str = ';'.join(valores[:6])
         print(parametros_str)
-        horas_reais = int(valores[6]
+        horas_reais = int(valores[6])
         raw_horas = (int(valores[6])*3600)//4
         horas =  raw_horas//3600
         envia_telegram(f"Buscando voos por {horas_reais} hora(s)...\nPara cancelar digite 'parar'", cid)
