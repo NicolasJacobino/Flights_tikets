@@ -202,21 +202,26 @@ def atende_usuario(cid, texto_formulario, atual_inicial, chats_respondidos, usua
             return
         if len(valores[0])>3 or len(valores[1])>3:
             envia_telegram("Erro: Coloque apenas o código do aeroporto.Preencha corretamente o formulário",cid)
+            usuarios_em_execucao.discard(cid)
             return 
         today = datetime.today().date()
         departure_date_obj = datetime.strptime(parse_custom_date(valores[2]), "%Y-%m-%d")
         return_date_obj = datetime.strptime(parse_custom_date(valores[3]), "%Y-%m-%d")
         if departure_date_obj.date() < today:
             envia_telegram("Erro: A data de partida não pode ser anterior a hoje.Preencha corretamente o formulário",cid)
+            usuarios_em_execucao.discard(cid)
             return 
         if return_date_obj.date() < today:
             envia_telegram("Erro: A data de retorno não pode ser anterior a hoje.",cid)
+            usuarios_em_execucao.discard(cid)
             return 
         if return_date_obj < departure_date_obj:
             envia_telegram("Erro: A data de retorno não pode ser anterior à data de partida.",cid)
+            usuarios_em_execucao.discard(cid)
             return 
         if valores[4] > valores[5]:
-             envia_telegram("Erro: O valor mínimo não pode ser maior que o máximo.",cid)
+            envia_telegram("Erro: O valor mínimo não pode ser maior que o máximo.",cid)
+            usuarios_em_execucao.discard(cid)
             return 
         #-------------------------------------------------------------------#
         parametros_str = ';'.join(valores[:6])
