@@ -65,7 +65,9 @@ def parse_custom_date(date_str):
         "%d%m%y",     # 010124
         "%d%m%Y",     # 01012024
         "%d/%m/%Y",   # 01/01/2024
+        "%d/%m/%y",   # 01/01/24
         "%d-%m-%Y",   # 01-01-2024
+        "%d-%m-%y",   # 01-01-24
         "%Y%m%d",     # 20240101
     ]
 
@@ -86,6 +88,17 @@ def requisita_api(parametros_sem_horas):
         from_, to_, departure_date_raw, return_date_raw, price_min, price_max = parametros_sem_horas.split(';')
         departure_date = parse_custom_date(departure_date_raw)
         return_date = parse_custom_date(return_date_raw)
+        
+        if not departure_date or not return_date:
+            return "Erro: Formato de data inválido."
+        today = datetime.today().date()
+        if departure_date.date() < today:
+            return "Erro: A data de partida não pode ser anterior a hoje."
+        if return_date.date() < today:
+            return "Erro: A data de retorno não pode ser anterior a hoje."
+        if return_date < departure_date:
+            return "Erro: A data de retorno não pode ser anterior à data de partida."
+            
         price_min = float(price_min)
         price_max = float(price_max)
         print(departure_date)
@@ -210,7 +223,13 @@ def atende_usuario(cid, texto_formulario, atual_inicial, chats_respondidos, usua
             #envia_telegram(f"🔎 Verificação {h+1}/{horas} em andamento...", cid)
             resposta = requisita_api(parametros_str)
             if resposta != 'Nenhum voo dentro da faixa de preço informada.':
-              envia_telegram(resposta, cid)
+                if resposta in ["Erro: Formato de data inválido.","Erro: A data de partida não pode ser anterior a hoje.","Erro: A data de retorno não pode ser anterior a hoje.","Erro: A data de retorno não pode ser anterior à data de partida."]:
+                    envia_telegram(resposta, cid)
+                    envia_telegram("Preencha novamente o Formulário com as datas corretas",cid)
+                    interrompe = True
+                    break
+                else:
+                    envia_telegram(resposta, cid)
             print(resposta)
 
             if h < horas - 1:
