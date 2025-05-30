@@ -261,8 +261,8 @@ def atende_usuario(cid, texto_formulario, atual_inicial, chats_respondidos, usua
         usuarios_em_execucao.discard(cid)
         envia_telegram("Fim da pesquisa!\nPara reiniciar preencha novamente o formulário", cid)
         envia_telegram (
-                    "Local de partida(Código do Aeroporto, ex:CNF): \n"
-                    "Local de chegada(Código do Aeroporto, ex:CNF): \n"
+                    "Local de partida: \n"
+                    "Local de chegada: \n"
                     "Data de partida: \n"
                     "Data de retorno: \n"
                     "Valor mínimo da passagem: \n"
@@ -290,10 +290,10 @@ def loop_telegram():
 
             # PRIMEIRA INTERAÇÃO: envia formulário
             if cid not in chats_respondidos and cid not in usuarios_em_execucao:
-                mensagem1 = f"Olá {first_name} ✈️\nPor favor, preencha o formulário abaixo:"
+                mensagem1 = f"Olá {first_name} ✈️\nPor favor, preencha o formulário abaixo. Para pesquisa utilize apenas o código do Aeroporto, ex:CNF):"
                 mensagem2 = (
-                    "Local de partida(Código do Aeroporto, ex:CNF): \n"
-                    "Local de chegada(Código do Aeroporto, ex:CNF): \n"
+                    "Local de partida: \n"
+                    "Local de chegada: \n"
                     "Data de Partida: \n"
                     "Data de retorno: \n"
                     "Valor mínimo da passagem: \n"
