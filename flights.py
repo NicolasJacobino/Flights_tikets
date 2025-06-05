@@ -86,6 +86,10 @@ def requisita_api(parametros_sem_horas):
     try:
         print(parametros_sem_horas)
         from_, to_, departure_date_raw, return_date_raw, price_min, price_max = parametros_sem_horas.split(';')
+        print(from_)
+        print(to_)
+        print(price_min)
+        print(price_max)
         departure_date = parse_custom_date(departure_date_raw)
         return_date = parse_custom_date(return_date_raw)
         price_min = float(price_min)
@@ -155,7 +159,8 @@ def requisita_api(parametros_sem_horas):
             tempo_total_h_ = (segments_.get('totalTime',0)//3600)
             tempo_total_min_ = (segments_.get('totalTime',0)%3600)//60
             conexoes_ = f"✈️O voo de ida possui  2 conexões em {conexao1_} e {conexao2_}\n⏱️Tempo total da viagem estimado é {tempo_total_h_}H e {tempo_total_min_}min"
-        
+        else:
+            conexoes_ = "Não foi possível determinar as conexões do voo de ida."
         #volta
         if  len(raw_segments_) > 1 :
           segments1_ = raw_segments_[1]
@@ -227,8 +232,14 @@ def atende_usuario(cid, texto_formulario, atual_inicial, chats_respondidos, usua
         parametros_str = ';'.join(valores[:6])
         print(parametros_str)
         horas_reais = int(valores[6])
+        print(horas_reais)
         raw_horas = (int(valores[6])*3600)//4
-        horas =  raw_horas//3600
+        print(raw_horas)
+        if raw_horas//3600 <1:
+            horas = 1
+        else:
+          horas =  raw_horas//3600
+        print(raw_horas)
         envia_telegram(f"Buscando voos por {horas_reais} hora(s)...\nPara cancelar digite 'parar'", cid)
 
         interrompe = False
@@ -295,17 +306,20 @@ def loop_telegram():
         for resultado in updates.get("result", []):
             atual = resultado["update_id"] + 1
             mensagem = resultado.get("message")
-            print(mensagem.get("text", ""))
             if not mensagem:
                 continue
 
             text = mensagem.get("text", "")
+            print(text)
             cid = mensagem["chat"]["id"]
             first_name = mensagem["chat"].get("first_name", "usuário")
 
-            # PRIMEIRA INTERAÇÃO: envia formulário
+            # PRIMEIRA INTERAÇÃO
             if cid not in chats_respondidos and cid not in usuarios_em_execucao:
-                mensagem1 = f"Olá {first_name} ✈️\nPor favor, preencha o formulário abaixo. Para pesquisa utilize apenas o código do Aeroporto, ex:CNF):"
+                mensagem1 = (
+                    f"Olá {first_name} ✈️\nPor favor, preencha o formulário abaixo. "
+                    f"Para pesquisa utilize apenas o código do aeroporto, ex: CNF."
+                )
                 mensagem2 = (
                     "Local de partida: \n"
                     "Local de chegada: \n"
@@ -320,19 +334,47 @@ def loop_telegram():
                 chats_respondidos.add(cid)
                 continue
 
-            # Se o usuário já enviou o formulário completo e não está executando processo, chama a função de atendimento
-            if (cid not in usuarios_em_execucao and
-                all(campo in text for campo in [
-                    "Local de partida:", "Local de chegada:", "Data de Partida:",
-                    "Data de retorno:", "Valor mínimo da passagem:",
-                    "Valor máximo da passagem:", "Horas de execução do serviço:"
-                ])):
-                
-                usuarios_em_execucao.add(cid)
-                Thread(target=atende_usuario, args=(cid, text, atual, chats_respondidos, usuarios_em_execucao)).start()
+            # PROCESSA FORMULÁRIO
+            campos_necessarios = [
+                "local de partida:", "local de chegada:", "data de partida:",
+                "data de retorno:", "valor mínimo da passagem:",
+                "valor máximo da passagem:", "horas de execução do serviço:"
+            ]
+
+            texto_recebido = text.lower()
+
+            campos_presentes = [campo for campo in campos_necessarios if campo in texto_recebido]
+            formulario_completo = len(campos_presentes) == len(campos_necessarios)
+
+            if cid not in usuarios_em_execucao:
+                if formulario_completo:
+                    print('✅ Formulário completo. Iniciando atendimento...')
+                    usuarios_em_execucao.add(cid)
+                    print(usuarios_em_execucao)
+                    Thread(target=atende_usuario, args=(cid, text, atual, chats_respondidos, usuarios_em_execucao)).start()
+                else:
+                    campos_faltando = [campo for campo in campos_necessarios if campo not in texto_recebido]
+                    print('❌ Formulário incompleto. Faltam:', campos_faltando)
+
+                    mensagem_erro = (
+                        "❌ O formulário está incompleto. Faltam os seguintes campos:\n"
+                        + "\n".join(f"- {campo}" for campo in campos_faltando) +
+                        "\n\nPor favor, preencha novamente usando o formato correto:"
+                    )
+                    envia_telegram(mensagem_erro, cid)
+
+                    exemplo = (
+                        "Local de partida: CNF\n"
+                        "Local de chegada: VIX\n"
+                        "Data de Partida: 2025-06-01\n"
+                        "Data de retorno: 2025-07-01\n"
+                        "Valor mínimo da passagem: 100\n"
+                        "Valor máximo da passagem: 1500\n"
+                        "Horas de execução do serviço: 200"
+                    )
+                    envia_telegram(exemplo, cid)
 
         time.sleep(5)
-
 @app.route("/")
 def health_check():
     return "Aplicação em funcionamento!", 200
