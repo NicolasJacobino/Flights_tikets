@@ -272,7 +272,8 @@ def atende_usuario(cid, texto_formulario, atual_inicial, chats_respondidos, usua
                             envia_telegram("⛔ Interrupção solicitada. Você pode iniciar novamente preenchendo o formulário.", cid)
                             chats_respondidos.discard(cid)
                             interrompe = True
-                            break
+                            #break
+                            return
                     if interrompe:
                         break
                     time.sleep(intervalo)
