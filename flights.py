@@ -258,6 +258,7 @@ def atende_usuario(cid, texto_formulario, atual_inicial, chats_respondidos, usua
                 ciclos = tempo_total // intervalo
 
                 for _ in range(ciclos):
+                    interrompe = False
                     novas_msgs = pega_mensagens(atual)
                     for novo_resultado in novas_msgs["result"]:
                         atual = novo_resultado["update_id"] + 1
